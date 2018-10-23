@@ -1,0 +1,15 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+MixProject	mix.exs	/^defmodule Replicator.MixProject do$/;"	m
+Replicator	lib/replicator.ex	/^defmodule Replicator do$/;"	m
+ReplicatorTest	test/replicator_test.exs	/^defmodule ReplicatorTest do$/;"	m
+application	lib/replicator.ex	/^def application do$/;"	f
+application	mix.exs	/^  def application do$/;"	f
+deps	mix.exs	/^  defp deps do$/;"	f
+greets the world	test/replicator_test.exs	/^  test "greets the world" do$/;"	t
+hello	lib/replicator.ex	/^  def hello do$/;"	f
+project	mix.exs	/^  def project do$/;"	f
