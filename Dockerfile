@@ -20,7 +20,8 @@ ENV REPLACE_OS_VARS=true
 
 RUN apk add bash
 
-COPY --from=aze /build/_build/prod/rel/ /app
+COPY --from=build /build/_build/prod/rel/ /app
+ENV MIX_ENV=prod
 
 ENTRYPOINT ["/bin/bash"]
 CMD ["/app/replicator/bin/replicator", "foreground"]
