@@ -34,4 +34,5 @@ config :replicator,
     %{secret: "wildcard-app-ninja-tls-certificates", namespace: "reverse-proxy"},
     %{secret: "registry.gitlab.com", namespace: "tools"}
   ],
-  kube_config: "/home/rdesousa/.kube/config"
+  kube_config: "/home/rdesousa/.kube/config",
+  environment: Mix.env()
