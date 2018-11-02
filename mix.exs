@@ -19,7 +19,10 @@ defmodule Replicator.MixProject do
   # end
 
   def application do
-    [applications: [:logger, :kazan], mod: {Main, []}]
+    [
+      applications: [:logger, :kazan],
+      mod: {Main, []}
+    ]
   end
 
   # Run "mix help deps" to learn about dependencies.

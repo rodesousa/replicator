@@ -14,11 +14,10 @@ defmodule Replicator do
   @doc """
   only bootstrap
   """
-  def create_all_secrets do
-    with server <- get_connection,
-         {:ok, namespaces} <- get_list_namespace(server),
-         secrets = Application.fetch_env!(:replicator, :secrets) do
-      secrets
+  def create_all_secrets(server) do
+    with {:ok, namespaces} <- get_list_namespace(server),
+         kube_secrets <- Application.fetch_env!(:replicator, :secrets) do
+      kube_secrets
       |> Enum.map(&ref_secret(server, &1))
       |> Enum.each(&create_new_secret(&1, server, namespaces.items))
 
@@ -29,30 +28,28 @@ defmodule Replicator do
     end
   end
 
-  def init_watcher(resource_version) do
+  def init_watcher(resource_version, server) do
     Kazan.Apis.Core.V1.watch_namespace_list!()
     |> Kazan.Watcher.start_link(
-      server: get_connection,
+      server: server,
       resource_version: resource_version,
       send_to: self()
     )
   end
 
-  def start_link() do
-    with {:ok, rv} <- create_all_secrets do
-      GenServer.start_link(__MODULE__, %{resource_version: rv, error: 0})
+  def start_link(server) do
+    with {:ok, rv} <- create_all_secrets(server) do
+      GenServer.start_link(__MODULE__, %{resource_version: rv, error: 0, server: server})
     else
-      {_reason, _code, msg} -> Logger.error("Error: #{Map.get(msg, "message")}")
+      {_reason, _code, response} ->
+        Logger.error("Error: #{Map.get(response, "message")}")
+        Logger.error("Replicator didn't start")
     end
   end
 
-  def init(%{resource_version: rv, error: _error} = state) do
-    init_watcher(rv)
+  def init(%{resource_version: rv, error: _error, server: server} = state) do
+    init_watcher(rv, server)
     {:ok, state}
-  end
-
-  def get_connection do
-    Kazan.Server.from_kubeconfig("/home/rdesousa/.kube/config")
   end
 
   def ref_secret(server, %{namespace: namespace, secret: secret}) do
@@ -61,8 +58,8 @@ defmodule Replicator do
     |> Kazan.run(server: server)
   end
 
-  def create_new_secret({:ko, {_reason, _code, msg}}, _server, _namespace) do
-    Logger.error("Generation secret fail: #{msg.message}")
+  def create_new_secret({_status, {_reason, _code, msg}}, _server, _namespace) do
+    Logger.error("Generation secret fail: #{Map.get(msg, "message")}")
   end
 
   def create_new_secret({:ok, secret}, server, namespaces) do
@@ -82,7 +79,8 @@ defmodule Replicator do
 
   def handle_info(%Kazan.Watcher.Event{object: _object, from: _pid, type: :gone}, %{
         resource_version: _rv,
-        error: error
+        error: error,
+        server: server
       }) do
     Logger.info("Too old resource version")
 
@@ -94,7 +92,9 @@ defmodule Replicator do
       _ ->
         Logger.info("Restart watcher")
         Process.sleep(1000)
-        {:noreply, %{resource_version: create_all_secrets, error: error + 1}}
+
+        {:noreply,
+         %{resource_version: create_all_secrets(server), error: error + 1, server: server}}
     end
   end
 
@@ -102,23 +102,23 @@ defmodule Replicator do
         %Kazan.Watcher.Event{object: object, from: _pid, type: type},
         %{
           resource_version: rv,
-          error: _error
-        }
+          error: _error,
+          server: server
+        } = state
       ) do
     case type do
       :added ->
         Logger.debug("New namespace: #{object.metadata.name}")
-        server = get_connection
 
         Application.fetch_env!(:replicator, :secrets)
         |> Enum.map(&ref_secret(server, &1))
         |> Enum.each(&create_new_secret(&1, server, [object]))
 
         {_, cheat} = get_list_namespace(server)
-        {:noreply, %{resource_version: cheat.metadata.resource_version, error: 0}}
+        {:noreply, %{resource_version: cheat.metadata.resource_version, error: 0, server: server}}
 
       _ ->
-        {:noreply, %{resource_version: rv, error: 0}}
+        {:noreply, state}
     end
   end
 
