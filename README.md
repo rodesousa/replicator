@@ -4,18 +4,11 @@
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `replicator` to your list of dependencies in `mix.exs`:
+**TODO**
 
-```elixir
-def deps do
-  [
-    {:replicator, "~> 0.1.0"}
-  ]
-end
-```
+## TODO
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/replicator](https://hexdocs.pm/replicator).
-
++ Don't debug log in prod
++ Change `secrets` Mix config to yaml properties
++ Improve logging
++ Add CI
