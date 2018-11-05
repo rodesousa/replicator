@@ -15,9 +15,8 @@ defmodule Replicator do
   only bootstrap
   """
   def create_all_secrets(server) do
-    with {:ok, namespaces} <- get_list_namespace(server),
-         kube_secrets <- Application.fetch_env!(:replicator, :secrets) do
-      kube_secrets
+    with {:ok, namespaces} <- get_list_namespace(server) do
+      Application.fetch_env!(:replicator, :secrets)
       |> Enum.map(&ref_secret(server, &1))
       |> Enum.each(&create_new_secret(&1, server, namespaces.items))
 

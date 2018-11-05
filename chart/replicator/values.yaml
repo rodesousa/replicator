@@ -3,6 +3,13 @@ image:
   tag: latest
   pullPolicy: Always
   # pullPolicy: IfNotPresent
+  #
+
+secrets: []
+#  - namespace: lalal
+#    secret: lolo
+  #- namespace: lala
+  #  secret: lalal
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious

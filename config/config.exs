@@ -30,9 +30,6 @@ use Mix.Config
 #     import_config "#{Mix.env()}.exs"
 
 config :replicator,
-  secrets: [
-    %{secret: "wildcard-app-ninja-tls-certificates", namespace: "reverse-proxy"},
-    %{secret: "registry.gitlab.com", namespace: "tools"}
-  ],
-  kube_config: "/home/rdesousa/.kube/config",
   environment: Mix.env()
+
+import_config "#{Mix.env()}.exs"

@@ -33,3 +33,10 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/replicator/config
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "replicator.fullname" . }}
