@@ -1,7 +1,14 @@
 # Replicator
 
-**TODO: Add description**
+Kubernetes controller that copy secrets in all namespaces
 
+## Description
+
+Some secrets (ssl certificate, registry credentials) should be present in all namespaces (imho, all namespaces should be independent)
+
+So this controller takes a list of tuples (secret, namespace) and copies it in all namespaces (every new namespace, secrets are copied)
+
+[Chart Helm](./chart)
 
 ## Dev
 
@@ -15,7 +22,7 @@ Use iex for dev:
 iex -s mix compile
 ```
 
-There is a [dev.exs](./config/dev.exs) file configured for a local kube config and a example of secret
+There is a [dev.exs](./config/dev.exs) file configured for a local kube config and an example of secret
 
 You need to change a path:
 ```
