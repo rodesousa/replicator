@@ -2,7 +2,7 @@ use Mix.Config
 
 config :replicator,
   secrets: [
-    %{secret: "registry.gitlab.com", namespace: "tools"}
+    %{secret: "mysecret", namespace: "default"}
   ],
   kube_config: "/home/rdesousa/.kube/config",
   secrets_file: "test.exs"

@@ -1,26 +1,27 @@
-defmodule Replicator do
+defmodule NamespaceWatcher do
   @moduledoc """
-  A simple gen server that starts up App processes under the AppsSupervisor
   """
   use GenServer
 
   require Logger
 
-  def get_list_namespace(server) do
-    Kazan.Apis.Core.V1.list_namespace!()
-    |> Kazan.run(server: server)
+  # @spec delete_secret(String.t(), String.t(), Kazan.Server) :: struct
+  def delete_secret(ns, secret, server) do
+    %Kazan.Models.Apimachinery.Meta.V1.DeleteOptions{}
+    |> Kazan.Apis.Core.V1.delete_namespaced_secret!(ns.metadata.name, secret.metadata.name)
+    |> Kazan.run!(server: server)
   end
 
   @doc """
   only bootstrap
   """
   def create_all_secrets(server) do
-    with {:ok, namespaces} <- get_list_namespace(server) do
+    with {:ok, namespaces} <- NamespaceHelper.get_list_namespace(server) do
       Application.fetch_env!(:replicator, :secrets)
       |> Enum.map(&ref_secret(server, &1))
-      |> Enum.each(&create_new_secret(&1, server, namespaces.items))
+      |> Enum.each(&generate_new_secret(&1, server, namespaces.items))
 
-      {_, cheat} = get_list_namespace(server)
+      {_, cheat} = NamespaceHelper.get_list_namespace(server)
       {:ok, cheat.metadata.resource_version}
     else
       err -> {:error, err}
@@ -57,21 +58,52 @@ defmodule Replicator do
     |> Kazan.run(server: server)
   end
 
-  def create_new_secret({_status, {_reason, _code, msg}}, _server, _namespace) do
+  def generate_new_secret({_status, {_reason, _code, msg}}, _server, _namespace) do
     Logger.error("Generation secret fail: #{Map.get(msg, "message")}")
   end
 
-  def create_new_secret({:ok, secret}, server, namespaces) do
-    for namespace <- namespaces do
-      new_secret_from_copy(secret)
-      |> Kazan.Apis.Core.V1.create_namespaced_secret!(namespace.metadata.name)
-      |> Kazan.run(server: server)
-      |> case do
-        {:ok, _} ->
-          Logger.info("#{secret.metadata.name} is created in #{namespace.metadata.name}")
+  defp compare_secret(secret, secret_ref) do
+    secret.data != secret_ref.data
+  end
 
-        {:error, {_reason, _code, msg}} ->
-          Logger.error("#{Map.get(msg, "message")} in namespace #{namespace.metadata.name}")
+  def generate_new_secret({:ok, secret}, server, namespaces) do
+    for namespace <- namespaces do
+      new_secret =
+        secret
+        |> SecretHelper.copy_from_request()
+
+      namespace
+      |> SecretHelper.read(secret, server)
+      |> case do
+        {:ok, secret_to} ->
+          if compare_secret(secret_to, new_secret) do
+            delete_secret(namespace, secret_to, server)
+          end
+
+          namespace.metadata.name
+          |> SecretHelper.create(new_secret, server)
+          |> case do
+            {:ok, _} ->
+              Logger.info(
+                "Secret: #{new_secret.metadata.name} Created in #{namespace.metadata.name}"
+              )
+
+            {:error, {_reason, _code, msg}} ->
+              Logger.error("#{Map.get(msg, "message")} in namespace #{namespace.metadata.name}")
+          end
+
+        {:error, secret} ->
+          namespace.metadata.name
+          |> SecretHelper.create(new_secret, server)
+          |> case do
+            {:ok, _} ->
+              Logger.info(
+                "Secret: #{new_secret.metadata.name} Created in #{namespace.metadata.name}"
+              )
+
+            {:error, {_reason, _code, msg}} ->
+              Logger.error("#{Map.get(msg, "message")} in namespace #{namespace.metadata.name}")
+          end
       end
     end
   end
@@ -107,13 +139,11 @@ defmodule Replicator do
       ) do
     case type do
       :added ->
-        Logger.debug("New namespace: #{object.metadata.name}")
-
         Application.fetch_env!(:replicator, :secrets)
         |> Enum.map(&ref_secret(server, &1))
-        |> Enum.each(&create_new_secret(&1, server, [object]))
+        |> Enum.each(&generate_new_secret(&1, server, [object]))
 
-        {_, cheat} = get_list_namespace(server)
+        {_, cheat} = NamespaceHelper.get_list_namespace(server)
         {:noreply, %{resource_version: cheat.metadata.resource_version, error: 0, server: server}}
 
       _ ->
@@ -123,18 +153,5 @@ defmodule Replicator do
 
   def terminate(_, _state) do
     Logger.error("Watcher k8s is dead")
-  end
-
-  def new_secret_from_copy(map) do
-    %Kazan.Apis.Core.V1.Secret{
-      api_version: map.api_version,
-      data: map.data,
-      kind: map.kind,
-      type: map.type,
-      metadata: %Kazan.Models.Apimachinery.Meta.V1.ObjectMeta{
-        name: map.metadata.name,
-        labels: map.metadata.labels
-      }
-    }
   end
 end

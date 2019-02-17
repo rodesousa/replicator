@@ -1,8 +1,15 @@
 defmodule Main do
   use Application
 
-  def start(_type, _args) do
-    Configuration.fetch_configuration()
-    |> Replicator.start_link()
+  require Logger
+
+  def start(_a, _b) do
+    server = Configuration.fetch_configuration()
+
+    server
+    |> SecretWatcher.start_link()
+
+    server
+    |> NamespaceWatcher.start_link()
   end
 end

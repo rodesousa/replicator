@@ -7,8 +7,14 @@ docker-push:
 dep:
 	mix deps.get
 
-helmtest-install:
+helm-test-install:
 	helm install --name replicator-test ./chart/replicator
 
-helmtest-delete:
+helm-test-delete:
 	helm del --purge replicator-test
+
+compile:
+	iex -S mix compile
+
+run:
+	iex -S mix

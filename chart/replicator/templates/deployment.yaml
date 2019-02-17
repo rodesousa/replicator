@@ -20,7 +20,6 @@ spec:
       serviceAccountName: {{ include "replicator.fullname" . }}
       containers:
         - name: {{ .Chart.Name }}
-          # command: ["top"]
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           resources:

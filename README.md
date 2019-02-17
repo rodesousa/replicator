@@ -1,16 +1,30 @@
 # Replicator
 
-Kubernetes controller that copy secrets in all namespaces
+Kubernetes controller copies, updates and adds secrets in all the namespaces
 
 ## Description
 
-Some secrets (ssl certificate, registry credentials) should be present in all namespaces (imho, all namespaces should be independent)
+Some secrets (ex: ssl certificate, registry credentials) should be present in all namespaces (imho, all namespaces should be independent)
 
-So this controller takes a list of tuples (secret, namespace) and copies it in all namespaces (every new namespace, secrets are copied)
+The **replicator** controller takes a list of tuples (secret, namespace), reference secrets, and allow you to:
+
++ copy a reference secrets in all namespaces
++ update all reference secrets when a reference secrets changes
++ add a reference secrets in new namespaces
+
+## Helm
 
 [Chart Helm](./chart)
 
-## Dev
+## Properties
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `replicator.secret` | %{secret:, String.t(), namespace: String.t()} | **dev only** Reference secret |
+| `replicator.kube_config` | String.t() | **dev only** kube config file used by `kubectl` |
+| `replicator.secrets_file` | String.t() | **prod only** Reference secret file built by helm [cm.yaml](./chart/replicator/templates/cm.yaml) |
+
+## Lifecyle
 
 Get back dependencies:
 ```
@@ -22,46 +36,16 @@ Use iex for dev:
 iex -s mix compile
 ```
 
-There is a [dev.exs](./config/dev.exs) file configured for a local kube config and an example of secret
-
-You need to change a path:
+You need to change your kube config path to use it:
 ```
   kube_config: "/home/rdesousa/.kube/config"
 ```
 
-### How put secrets ?
-
-In [dev.exs](./config/dev) put:
-```
-config :replicator,
-  secrets: [
-    %{secret: "foo", namespace: "bar"}
-  ]
-```
-
-## Prod
-
-Use [chart](./chart/replicator)
-
-Prod env use `ca.cert` and `token` (in a pod) for the connection of k8s cluster
-
-### You need test `secrets_file` in dev ?
-
-Put a `test.exs` in project root with secrets list:
-```
-use Mix.Config
-
-config :replicator,
-  secrets: [
-    %{secret: "TEST", namespace: "TEST"}
-  ]
-```
+** For Kazan in iex users, you have to use `HTTPoison.start`  in your console first**
 
 ## TODO
 
-+ Don't debug log in prod
-+ Improve logging
 + Add CI
 + Add test
 + change map list secrets to keyword lists
-+ When restart (resource_version too old) keep a list of namespace (in state for example) treated and create the secrets only new namespaces
++ Refacto ./lib/namespace_*
